@@ -6,21 +6,21 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Outfit', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     
-    /* Custom theme colors to support missing legacy values and make styling consistent */
-    --color-indigo-50: #f5f3ff;
-    --color-indigo-100: #e0e7ff;
-    --color-indigo-200: #c7d2fe;
-    --color-indigo-600: #4f46e5;
-    --color-indigo-650: #5450e4;
-    --color-indigo-700: #4338ca;
-    --color-indigo-750: #3730a3;
-    --color-indigo-755: #2e2a86;
-    --color-indigo-800: #3730a3;
-    --color-indigo-850: #1e1b4b;
-    --color-indigo-900: #1e1b4b;
-    --color-indigo-950: #0f0b29;
+    /* Custom theme colors overridden with official Navy/Gov Blue shades */
+    --color-indigo-50: #f1f5f9;
+    --color-indigo-100: #e2e8f0;
+    --color-indigo-200: #cbd5e1;
+    --color-indigo-600: #0a2540; /* Royal Navy Primary */
+    --color-indigo-650: #001f3f; /* Deep Navy */
+    --color-indigo-700: #0f2d59; /* Bright Navy */
+    --color-indigo-750: #051a37;
+    --color-indigo-755: #031126;
+    --color-indigo-800: #051a37;
+    --color-indigo-850: #020b18;
+    --color-indigo-900: #020b18;
+    --color-indigo-950: #01040a;
     
     --color-slate-200: #e2e8f0;
     --color-slate-350: #cbd5e1;
@@ -33,7 +33,7 @@
     --color-emerald-100: #d1fae5;
     --color-emerald-200: #a7f3d0;
     --color-emerald-250: #6ee7b7;
-    --color-emerald-600: #059669;
+    --color-emerald-600: #047857;
     --color-emerald-800: #065f46;
     
     --color-amber-50: #fffbeb;
@@ -41,28 +41,28 @@
     --color-amber-200: #fde68a;
     --color-amber-250: #fde68a;
     --color-amber-255: #fcd34d;
-    --color-amber-500: #f59e0b;
-    --color-amber-600: #d97706;
-    --color-amber-805: #92400e;
+    --color-amber-500: #d97706;
+    --color-amber-600: #b45309;
+    --color-amber-805: #78350f;
     
     --color-rose-50: #fff1f2;
     --color-rose-100: #ffe4e6;
     --color-rose-200: #fecdd3;
     --color-rose-250: #fda4af;
-    --color-rose-500: #f43f5e;
-    --color-rose-600: #e11d48;
-    --color-rose-700: #be123c;
-    --color-rose-800: #9f1239;
+    --color-rose-500: #e11d48;
+    --color-rose-600: #be123c;
+    --color-rose-700: #9f1239;
+    --color-rose-800: #881337;
     
-    --color-cyan-50: #ecfeff;
-    --color-cyan-600: #0891b2;
-    --color-cyan-650: #0e7490;
-    --color-cyan-755: #155e75;
+    --color-cyan-50: #f0fdfa;
+    --color-cyan-600: #0d9488;
+    --color-cyan-650: #0f766e;
+    --color-cyan-755: #115e59;
     
     /* Modern card shadows */
-    --shadow-premium-sm: 0 2px 8px -1px rgba(0, 0, 0, 0.04), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-    --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 5px 15px -3px rgba(0, 0, 0, 0.02);
-    --shadow-premium-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.07), 0 10px 20px -5px rgba(0, 0, 0, 0.03);
+    --shadow-premium-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shadow-premium-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
 }
 
 /* Glassmorphism custom classes */
@@ -222,4 +222,13 @@
     color: #475569;
     box-shadow: var(--shadow-premium-sm);
 }
+
+/* Red-White stripe ribbon for Indonesian Government look */
+.red-white-stripe {
+    height: 5px;
+    background: linear-gradient(90deg, #e11d48 50%, #ffffff 50%);
+    background-size: 100% 100%;
+    width: 100%;
+}
+
 

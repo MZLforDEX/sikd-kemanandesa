@@ -8,13 +8,13 @@
         
         <!-- Header -->
         <div class="bg-indigo-650 text-white px-8 py-10 text-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-tr from-indigo-900 to-indigo-600 opacity-90"></div>
+            <div class="absolute inset-0 bg-gradient-to-tr from-indigo-900 to-indigo-700 opacity-95"></div>
             <div class="relative z-10 space-y-2">
-                <div class="mx-auto w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-2">
-                    <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+                <div class="mx-auto w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-2 border border-white/15">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-amber-400"></i>
                 </div>
-                <h2 class="text-2xl font-extrabold tracking-tight">Portal Masuk SIKD</h2>
-                <p class="text-indigo-200 text-xs font-normal">Sistem Keamanan Desa Terintegrasi</p>
+                <h2 class="text-xl font-extrabold tracking-tight uppercase">Portal Masuk SIKD</h2>
+                <p class="text-slate-350 text-xs font-semibold">Pemerintah Desa Awa, Kec. Samaturu</p>
             </div>
         </div>
 
@@ -52,7 +52,6 @@
                         </div>
                         <input type="password" name="password" id="password" 
                             required 
-                            value="password"
                             placeholder="••••••••" 
                             class="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm placeholder-slate-455 focus:border-indigo-550 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 transition-premium font-medium text-slate-800">
                     </div>

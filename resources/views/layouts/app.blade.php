@@ -4,16 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="/manifest.json">
     <title>@yield('title', 'Sistem Keamanan Desa') - SIKD</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+        }
+
+        @keyframes marker-pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .blinking-marker {
+            background-color: #ef4444;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: marker-pulse 1.4s infinite;
+            display: inline-block;
+        }
+        
+        .blinking-marker-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 
@@ -26,6 +63,9 @@
 </head>
 <body class="h-full flex flex-col text-slate-800">
 
+    <!-- Red-White Flag Stripe Ribbon -->
+    <div class="red-white-stripe"></div>
+
     <!-- Navbar -->
     <header class="glass-panel sticky top-0 z-40 border-b border-slate-200/50 shadow-premium-sm backdrop-blur-md">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -33,13 +73,15 @@
                 
                 <!-- Logo & Brand -->
                 <div class="flex items-center space-x-3">
-                    <a href="/" class="flex items-center space-x-2.5 group">
-                        <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-premium-sm flex items-center justify-center transition-premium group-hover:scale-105 group-hover:bg-indigo-700">
-                            <i data-lucide="shield" class="w-5 h-5"></i>
+                    <a href="/" class="flex items-center space-x-3 group">
+                        <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-premium-sm flex items-center justify-center transition-premium group-hover:bg-indigo-700">
+                            <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
                         </div>
                         <div>
-                            <span class="text-base font-extrabold tracking-tight text-slate-900 block leading-tight">SIKD</span>
-                            <span class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase">Keamanan Desa</span>
+                            <span class="text-xs font-extrabold tracking-tight text-slate-900 block leading-tight uppercase font-sans">PEMERINTAH DESA AWA</span>
+                            <span class="text-[9px] text-slate-500 font-bold tracking-wider uppercase block">SIKD · KECAMATAN SAMATURU</span>
                         </div>
                     </a>
                 </div>
@@ -199,6 +241,10 @@
                                     <i data-lucide="home" class="w-4 h-4 text-slate-405"></i>
                                     <span>Halaman Utama</span>
                                 </a>
+                                <button type="button" id="push-toggle-btn" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition flex items-center space-x-2 font-medium border-t border-slate-100">
+                                    <i data-lucide="bell-ring" class="w-4 h-4 text-slate-405" id="push-icon"></i>
+                                    <span id="push-toggle-text">Notifikasi HP: Nonaktif</span>
+                                </button>
                                 <form action="{{ route('logout') }}" method="POST" class="block">
                                     @csrf
                                     <button type="submit" class="w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/50 transition flex items-center space-x-2 font-bold border-t border-slate-100">
@@ -338,15 +384,57 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 mt-auto py-6">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center text-slate-500 text-xs">
-            <p>&copy; {{ date('Y') }} SIKD - Sistem Informasi Keamanan Desa. Hak Cipta Dilindungi.</p>
-            <p class="mt-2 md:mt-0 flex items-center space-x-1.5 font-semibold text-slate-600">
-                <span>Stack: Laravel 12 + TailwindCSS 4</span>
-                <span class="h-1 w-1 bg-slate-350 rounded-full"></span>
-                <span>Active Protection</span>
-                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
-            </p>
+    <footer class="bg-indigo-950 text-slate-350 border-t border-indigo-900 mt-auto">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+                <!-- Info Layanan -->
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2 text-white">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span class="font-extrabold text-base tracking-tight uppercase font-sans">SIKD DESA AWA</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed font-normal">
+                        Sistem Informasi Keamanan Desa terintegrasi untuk pelayanan pelaporan kejadian darurat warga secara real-time dan pemantauan ronda keamanan lingkungan.
+                    </p>
+                </div>
+                <!-- Kontak Kantor Desa -->
+                <div class="space-y-2.5">
+                    <h4 class="text-white font-bold text-xs uppercase tracking-wider">Kontak & Layanan Darurat</h4>
+                    <ul class="space-y-2 text-xs text-slate-400 font-normal">
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
+                            <span>Kantor Kepala Desa Awa, Jl. Poros Kolaka-Mowewe, Kec. Samaturu, Kab. Kolaka, Sulawesi Tenggara 93551</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="phone" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                            <span>Hotline Kamtibmas: +62 823-4567-8910</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="mail" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                            <span>Email: aduan@desa-awa.go.id</span>
+                        </li>
+                    </ul>
+                </div>
+                <!-- Tautan Terkait -->
+                <div class="space-y-2.5">
+                    <h4 class="text-white font-bold text-xs uppercase tracking-wider">Tautan Resmi</h4>
+                    <ul class="space-y-2 text-xs text-slate-400 font-normal">
+                        <li><a href="https://www.kolakakab.go.id" target="_blank" class="hover:text-white transition">Portal Kabupaten Kolaka</a></li>
+                        <li><a href="https://kemendagri.go.id" target="_blank" class="hover:text-white transition">Kementerian Dalam Negeri RI</a></li>
+                        <li><a href="https://lapor.go.id" target="_blank" class="hover:text-white transition">SP4N-LAPOR! Layanan Aspirasi</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-indigo-900/60 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center text-[11px] text-slate-500 font-medium">
+                <p>&copy; {{ date('Y') }} Pemerintah Desa Awa. Hak Cipta Dilindungi Undang-Undang.</p>
+                <p class="mt-2 sm:mt-0 flex items-center space-x-1">
+                    <span>Dikembangkan untuk</span>
+                    <span class="text-slate-400 font-semibold">Keamanan & Ketertiban Masyarakat</span>
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                </p>
+            </div>
         </div>
     </footer>
 
@@ -433,6 +521,32 @@
             const menu = document.getElementById('mobileMenu');
             menu.classList.toggle('hidden');
         }
+
+        // Intercept global Fetch requests to handle Page Expired (419) automatically
+        const { fetch: originalFetch } = window;
+        window.fetch = async (...args) => {
+            try {
+                let response = await originalFetch(...args);
+                if (response.status === 419) {
+                    if (window.showToast) {
+                        window.showToast("Sesi halaman telah berakhir (Page Expired). Memuat ulang halaman...", "danger");
+                    } else {
+                        alert("Sesi halaman telah berakhir (Page Expired). Halaman akan dimuat ulang.");
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+                return response;
+            } catch (err) {
+                throw err;
+            }
+        };
+
+        // Keep-alive ping to prevent session/CSRF expiration while browser tab is active
+        setInterval(() => {
+            fetch('/up').catch(err => console.debug('Keep-alive ping failed:', err));
+        }, 5 * 60 * 1000); // Every 5 minutes
     </script>
     
     @if(session('emergency_triggered'))
@@ -449,5 +563,175 @@
             });
         </script>
     @endif
+    @if(session('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                showToast("{{ session('error') }}", "danger");
+            });
+        </script>
+    @endif
+    @if($errors->any())
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                showToast("{{ $errors->first() }}", "danger");
+            });
+        </script>
+    @endif
+
+    @auth
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const vapidPublicKey = "{{ env('VAPID_PUBLIC_KEY') }}";
+            const pushToggleBtn = document.getElementById('push-toggle-btn');
+            const pushToggleText = document.getElementById('push-toggle-text');
+            const pushIcon = document.getElementById('push-icon');
+            
+            if (!pushToggleBtn) return;
+
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                pushToggleText.textContent = 'Notifikasi HP: Tidak Didukung';
+                pushToggleBtn.disabled = true;
+                return;
+            }
+
+            if (!vapidPublicKey) {
+                pushToggleText.textContent = 'Notifikasi HP: Belum Siap';
+                pushToggleBtn.disabled = true;
+                return;
+            }
+
+            let isSubscribed = false;
+            let swRegistration = null;
+
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(swReg) {
+                    swRegistration = swReg;
+                    initializeUI();
+                })
+                .catch(function(error) {
+                    console.error('Service Worker Error', error);
+                });
+
+            function initializeUI() {
+                pushToggleBtn.addEventListener('click', function() {
+                    pushToggleBtn.disabled = true;
+                    if (isSubscribed) {
+                        unsubscribeUser();
+                    } else {
+                        subscribeUser();
+                    }
+                });
+
+                swRegistration.pushManager.getSubscription()
+                    .then(function(subscription) {
+                        isSubscribed = !(subscription === null);
+                        updateBtn();
+                        if (!isSubscribed && Notification.permission !== 'denied') {
+                            subscribeUser();
+                        }
+                    });
+            }
+
+            function updateBtn() {
+                if (Notification.permission === 'denied') {
+                    pushToggleText.textContent = 'Notifikasi HP: Diblokir';
+                    pushToggleBtn.disabled = true;
+                    return;
+                }
+
+                if (isSubscribed) {
+                    pushToggleText.textContent = 'Notifikasi HP: Aktif';
+                    pushToggleBtn.classList.add('bg-emerald-50/50', 'text-emerald-700');
+                    pushIcon.classList.add('text-emerald-500');
+                } else {
+                    pushToggleText.textContent = 'Notifikasi HP: Nonaktif';
+                    pushToggleBtn.classList.remove('bg-emerald-50/50', 'text-emerald-700');
+                    pushIcon.classList.remove('text-emerald-500');
+                }
+
+                pushToggleBtn.disabled = false;
+            }
+
+            function urlB64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding)
+                    .replace(/\-/g, '+')
+                    .replace(/_/g, '/');
+
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            function subscribeUser() {
+                const applicationServerKey = urlB64ToUint8Array(vapidPublicKey);
+                swRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: applicationServerKey
+                })
+                .then(function(subscription) {
+                    updateSubscriptionOnServer(subscription);
+                    isSubscribed = true;
+                    updateBtn();
+                    if (window.showToast) window.showToast('Notifikasi HP berhasil diaktifkan!');
+                })
+                .catch(function(err) {
+                    console.error('Failed to subscribe the user: ', err);
+                    updateBtn();
+                });
+            }
+
+            function unsubscribeUser() {
+                swRegistration.pushManager.getSubscription()
+                    .then(function(subscription) {
+                        if (subscription) {
+                            subscription.unsubscribe().then(function() {
+                                removeSubscriptionFromServer(subscription);
+                                isSubscribed = false;
+                                updateBtn();
+                                if (window.showToast) window.showToast('Notifikasi HP telah dinonaktifkan.');
+                            });
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Error unsubscribing', error);
+                    });
+            }
+
+            function updateSubscriptionOnServer(subscription) {
+                const jsonSub = subscription.toJSON();
+                fetch("{{ route('push.subscribe') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    body: JSON.stringify({
+                        endpoint: subscription.endpoint,
+                        keys: jsonSub.keys,
+                        content_encoding: 'aes128gcm'
+                    })
+                });
+            }
+
+            function removeSubscriptionFromServer(subscription) {
+                fetch("{{ route('push.unsubscribe') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    body: JSON.stringify({
+                        endpoint: subscription.endpoint
+                    })
+                });
+            }
+        });
+    </script>
+    @endauth
 </body>
 </html>

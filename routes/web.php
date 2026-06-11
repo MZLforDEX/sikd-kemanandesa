@@ -48,6 +48,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     
+    // Web Push Subscriptions
+    Route::post('/push-subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
+    Route::post('/push-unsubscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
+    
     // Simulation Role Switcher
     Route::get('/simulasi/switch/{role}', [AuthController::class, 'switchRole'])->name('simulasi.switch');
 
@@ -63,6 +67,7 @@ Route::middleware(['auth', 'role:warga'])->prefix('warga')->name('warga.')->grou
     Route::get('/laporan/buat', [WargaController::class, 'createReport'])->name('reports.create');
     Route::post('/laporan', [WargaController::class, 'storeReport'])->name('reports.store');
     Route::get('/laporan/{report}', [WargaController::class, 'showReport'])->name('reports.show');
+    Route::post('/laporan/{report}/proses', [WargaController::class, 'prosesReport'])->name('reports.proses');
     Route::post('/darurat', [WargaController::class, 'triggerEmergency'])->name('emergency')->middleware('throttle:3,1');
 
     // Patroli & Ronda (Warga yang ditugaskan)

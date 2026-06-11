@@ -37,47 +37,58 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            function escapeHtml(text) {
+                if (!text) return '';
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
             var map = L.map('dashboard-map').setView([-3.946944, 121.351028], 15);
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }).addTo(map);
 
-            var villageCenter = L.marker([-3.946944, 121.351028], {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [18, 30],
-                    iconAnchor: [9, 30],
-                    popupAnchor: [1, -26],
-                    shadowSize: [30, 30]
-                })
-            }).addTo(map);
-            villageCenter.bindPopup("<b>Kantor Desa Awa</b><br>Kec. Samaturu, Kab. Kolaka, Sulawesi Tenggara");
+
 
             @foreach($reportsWithCoordinates as $report)
                 @if($report->latitude && $report->longitude)
                     (function() {
                         var lat = {{ $report->latitude }};
                         var lng = {{ $report->longitude }};
-                        var title = "{{ addslashes($report->title) }}";
-                        var status = "{{ $report->status }}";
-                        var location = "{{ addslashes($report->location) }}";
-                        var user = "{{ addslashes($report->user->name) }}";
+                        var title = {!! json_encode($report->title) !!};
+                        var description = {!! json_encode($report->description) !!};
+                        var status = {!! json_encode($report->status) !!};
+                        var location = {!! json_encode($report->location) !!};
+                        var user = {!! json_encode($report->user->name) !!};
                         var detailUrl = "{{ route('perangkat.reports.show', $report->id) }}";
                         
-                        var markerColor = 'red';
-                        if (status === 'selesai') markerColor = 'green';
-                        else if (status === 'diproses' || status === 'diverifikasi' || status === 'ditangani') markerColor = 'orange';
-                        else if (status === 'ditolak') markerColor = 'grey';
+                        // Select marker based on status (blinking red for baru, green for selesai, red for others)
+                        var markerIcon;
+                        if (status === 'baru') {
+                            markerIcon = L.divIcon({
+                                className: 'blinking-marker-container',
+                                html: '<div class="blinking-marker"></div>',
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8],
+                                popupAnchor: [0, -8]
+                            });
+                        } else {
+                            var markerColor = 'red';
+                            if (status === 'selesai') markerColor = 'green';
 
-                        var markerIcon = L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
-                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                            iconSize: [18, 30],
-                            iconAnchor: [9, 30],
-                            popupAnchor: [1, -26],
-                            shadowSize: [30, 30]
-                        });
+                            markerIcon = L.icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
+                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                iconSize: [18, 30],
+                                iconAnchor: [9, 30],
+                                popupAnchor: [1, -26],
+                                shadowSize: [30, 30]
+                            });
+                        }
 
                         var marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
                         
@@ -91,15 +102,16 @@
                         }
 
                         var popupHtml = `
-                            <div class="p-1 space-y-1.5 min-w-[200px] text-xs">
+                            <div class="p-1 space-y-1.5 min-w-[220px] text-xs">
                                 <div class="flex justify-between items-center gap-2">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">Laporan Warga</span>
                                     ${statusLabel}
                                 </div>
-                                <h4 class="font-bold text-slate-900 text-xs leading-tight">${title}</h4>
-                                <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${location}</p>
+                                <h4 class="font-bold text-slate-900 text-xs leading-tight">${escapeHtml(title)}</h4>
+                                <p class="text-[10px] text-slate-605 font-normal leading-normal mt-1">${escapeHtml(description)}</p>
+                                <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${escapeHtml(location)}</p>
                                 <div class="border-t border-slate-100 pt-1.5 mt-2 flex justify-between items-center text-[9px] text-slate-450">
-                                    <span>Oleh: ${user}</span>
+                                    <span>Oleh: ${escapeHtml(user)}</span>
                                     <a href="${detailUrl}" class="font-bold text-indigo-650 hover:text-indigo-850">Detail &rarr;</a>
                                 </div>
                             </div>
@@ -112,9 +124,13 @@
             var maxReportId = {{ \App\Models\Report::max('id') ?? 0 }};
 
             function checkRealtimeUpdates() {
-                fetch(`{{ route('reports.realtime_updates') }}?last_id=${maxReportId}`)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                return fetch(`{{ route('reports.realtime_updates') }}?last_id=${maxReportId}`, { signal: controller.signal })
                     .then(response => response.json())
                     .then(data => {
+                        clearTimeout(timeoutId);
                         if (data.stats) {
                             document.getElementById('stats-total').textContent = data.stats.total;
                             document.getElementById('stats-baru').textContent = data.stats.baru;
@@ -129,19 +145,28 @@
                                 if (report.id > maxReportId) maxReportId = report.id;
 
                                 if (report.latitude && report.longitude) {
-                                    var markerColor = 'red';
-                                    if (report.status === 'selesai') markerColor = 'green';
-                                    else if (report.status === 'diproses' || report.status === 'diverifikasi' || report.status === 'ditangani') markerColor = 'orange';
-                                    else if (report.status === 'ditolak') markerColor = 'grey';
+                                    var markerIcon;
+                                    if (report.status === 'baru') {
+                                        markerIcon = L.divIcon({
+                                            className: 'blinking-marker-container',
+                                            html: '<div class="blinking-marker"></div>',
+                                            iconSize: [16, 16],
+                                            iconAnchor: [8, 8],
+                                            popupAnchor: [0, -8]
+                                        });
+                                    } else {
+                                        var markerColor = 'red';
+                                        if (report.status === 'selesai') markerColor = 'green';
 
-                                    var markerIcon = L.icon({
-                                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
-                                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                        iconSize: [18, 30],
-                                        iconAnchor: [9, 30],
-                                        popupAnchor: [1, -26],
-                                        shadowSize: [30, 30]
-                                    });
+                                        markerIcon = L.icon({
+                                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
+                                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                            iconSize: [18, 30],
+                                            iconAnchor: [9, 30],
+                                            popupAnchor: [1, -26],
+                                            shadowSize: [30, 30]
+                                        });
+                                    }
 
                                     var marker = L.marker([report.latitude, report.longitude], { icon: markerIcon }).addTo(map);
 
@@ -154,16 +179,17 @@
                                         statusLabel = '<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-rose-50 text-rose-800 border border-rose-250">Ditolak</span>';
                                     }
 
-                                    var popupHtml = `
-                                        <div class="p-1 space-y-1.5 min-w-[200px] text-xs">
+                                     var popupHtml = `
+                                        <div class="p-1 space-y-1.5 min-w-[220px] text-xs">
                                             <div class="flex justify-between items-center gap-2">
                                                 <span class="text-[10px] font-bold text-slate-400 uppercase">Laporan Warga</span>
                                                 ${statusLabel}
                                             </div>
-                                            <h4 class="font-bold text-slate-900 text-xs leading-tight">${report.title}</h4>
-                                            <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${report.location}</p>
+                                            <h4 class="font-bold text-slate-900 text-xs leading-tight">${escapeHtml(report.title)}</h4>
+                                            <p class="text-[10px] text-slate-605 font-normal leading-normal mt-1">${escapeHtml(report.description)}</p>
+                                            <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${escapeHtml(report.location)}</p>
                                             <div class="border-t border-slate-100 pt-1.5 mt-2 flex justify-between items-center text-[9px] text-slate-450">
-                                                <span>Oleh: ${report.user_name}</span>
+                                                <span>Oleh: ${escapeHtml(report.user_name)}</span>
                                                 <a href="${report.detail_url_perangkat}" class="font-bold text-indigo-650 hover:text-indigo-850">Detail &rarr;</a>
                                             </div>
                                         </div>
@@ -178,13 +204,13 @@
                                     item.className = "p-6 hover:bg-slate-50/25 transition flex justify-between items-start gap-4";
                                     item.innerHTML = `
                                         <div class="space-y-1">
-                                            <h3 class="font-bold text-slate-900 text-sm leading-snug">${report.title}</h3>
+                                            <h3 class="font-bold text-slate-900 text-sm leading-snug">${escapeHtml(report.title)}</h3>
                                             <p class="text-xs text-slate-500 flex items-center space-x-1">
-                                                <span>Oleh: <strong>${report.user_name}</strong></span>
+                                                <span>Oleh: <strong>${escapeHtml(report.user_name)}</strong></span>
                                                 <span>•</span>
                                                 <span>Baru saja</span>
                                             </p>
-                                            <p class="text-xs text-slate-605 line-clamp-2 mt-2 font-normal">${report.description}</p>
+                                            <p class="text-xs text-slate-605 line-clamp-2 mt-2 font-normal">${escapeHtml(report.description)}</p>
                                         </div>
                                         <a href="${report.detail_url_perangkat}" class="inline-flex items-center space-x-1 text-xs font-bold bg-indigo-50 hover:bg-indigo-100/85 text-indigo-700 px-3 py-1.5 rounded-xl transition-premium hover:-translate-y-0.5 shrink-0">
                                             <span>Verifikasi</span>
@@ -196,10 +222,19 @@
                             });
                         }
                     })
-                    .catch(err => console.error("Error fetching updates: ", err));
+                    .catch(err => {
+                        clearTimeout(timeoutId);
+                        console.error("Error fetching updates: ", err);
+                    });
             }
 
-            setInterval(checkRealtimeUpdates, 5000);
+            // Resilient polling using setTimeout to avoid request stacking on poor networks
+            function scheduleNextCheck() {
+                setTimeout(() => {
+                    checkRealtimeUpdates().finally(scheduleNextCheck);
+                }, 15000);
+            }
+            scheduleNextCheck();
         });
     </script>
 

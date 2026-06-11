@@ -3,6 +3,7 @@
 @section('title', 'Jadwal Ronda Warga')
 
 @section('content')
+
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
@@ -26,13 +27,61 @@
                 @csrf
 
                 <!-- Satpam -->
-                <div class="space-y-1.5">
-                    <label for="user_id" class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Pilih Warga Petugas Ronda</label>
-                    <select name="user_id" id="user_id" required class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-sm focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 bg-white font-medium text-slate-800">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Pilih Warga Petugas Ronda (Bisa Pilih Banyak)</label>
+                    
+                    <!-- Search & Action Buttons -->
+                    <div class="space-y-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="search" class="h-4 w-4 text-slate-400"></i>
+                            </div>
+                            <input type="text" id="search_warga" placeholder="Cari nama warga..." class="block w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white font-medium text-slate-800">
+                        </div>
+                        
+                        <div class="flex items-center justify-between text-[11px] px-1">
+                            <button type="button" id="select_all_warga" class="text-indigo-650 hover:text-indigo-850 font-bold transition flex items-center space-x-1">
+                                <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                                <span>Pilih Semua</span>
+                            </button>
+                            <button type="button" id="deselect_all_warga" class="text-rose-600 hover:text-rose-800 font-bold transition flex items-center space-x-1">
+                                <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                                <span>Hapus Semua</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Checklist -->
+                    <div style="max-height: 230px; overflow-y: auto;" class="border border-slate-200 rounded-xl p-2.5 space-y-1 bg-slate-50/50" id="warga_list">
                         @foreach($satpams as $satpam)
-                            <option value="{{ $satpam->id }}">{{ $satpam->name }}</option>
+                            <label class="flex items-center justify-between p-2 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 cursor-pointer transition-premium warga-item" data-name="{{ strtolower($satpam->name) }}">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center font-extrabold text-xs border border-indigo-100">
+                                        {{ strtoupper(substr($satpam->name, 0, 2)) }}
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-1.5 name-wrapper">
+                                            <span class="text-xs font-bold text-slate-705 block name-text">{{ $satpam->name }}</span>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-1.5 mt-0.5 text-[9px] text-slate-400 font-normal details-wrapper">
+                                            @if($satpam->phone)
+                                                <span>{{ $satpam->phone }}</span>
+                                            @endif
+                                            @if($satpam->phone && isset($userSchedules[$satpam->id]))
+                                                <span class="dot-separator">•</span>
+                                            @endif
+                                            @if(isset($userSchedules[$satpam->id]))
+                                                <span class="text-amber-700 bg-amber-50/50 px-1 py-0.2 rounded-xs border border-amber-150/40 font-semibold text-[8px] badge-scheduled-date tracking-tight">
+                                                    Ronda: {{ $userSchedules[$satpam->id]->implode(', ') }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" name="user_ids[]" value="{{ $satpam->id }}" class="rounded-sm text-indigo-650 focus:ring-indigo-500 border-slate-300 w-4 h-4 checkbox-warga transition-premium">
+                            </label>
                         @endforeach
-                    </select>
+                    </div>
                 </div>
 
                 <!-- Date -->
@@ -90,9 +139,22 @@
 
         <!-- Right: Daftar Jadwal Aktif & History -->
         <div class="lg:col-span-8 bg-white border border-slate-200/60 rounded-3xl shadow-premium-sm overflow-hidden font-medium">
-            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 class="font-extrabold text-slate-900 text-base">Riwayat & Daftar Jadwal</h2>
-                <span class="text-xs text-slate-450 font-bold">Urut berdasarkan tanggal ronda</span>
+            <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 class="font-extrabold text-slate-900 text-base">Riwayat & Daftar Jadwal</h2>
+                    <p class="text-[11px] text-slate-550 font-normal mt-0.5">Kelola penugasan dan daftar jadwal ronda warga.</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="filter_date" class="text-xs font-bold text-slate-500 whitespace-nowrap">Pilih Tanggal:</label>
+                    <select id="filter_date" class="rounded-xl border border-slate-200 py-1.5 px-3 text-xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 bg-white font-medium text-slate-750">
+                        <option value="all" {{ ($selectedDate ?? '') == 'all' || !($selectedDate ?? '') ? 'selected' : '' }}>Semua Tanggal</option>
+                        @foreach($availableDates as $date)
+                            <option value="{{ $date }}" {{ ($selectedDate ?? '') == $date ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::parse($date)->translatedFormat('d-m-Y') }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             @if($schedules->isEmpty())
@@ -102,26 +164,34 @@
                     <p class="text-xs text-slate-500 mt-1 font-normal">Gunakan formulir di sebelah kiri untuk menjadwalkan warga petugas ronda.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-50/50 text-slate-500 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider">
-                                <th class="px-6 py-4">Petugas</th>
-                                <th class="px-6 py-4">Tanggal & Waktu</th>
-                                <th class="px-6 py-4">Shift & Area</th>
-                                <th class="px-6 py-4">Status</th>
-                                <th class="px-6 py-4 text-right">Aksi</th>
+                <div class="overflow-auto max-h-[380px]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="sticky top-0 bg-slate-50 z-10">
+                        <tr class="text-slate-500 border-b border-slate-150 text-[10px] font-bold uppercase tracking-wider bg-slate-50">
+                            <th class="px-6 py-4">Petugas</th>
+                            <th class="px-6 py-4">Waktu</th>
+                            <th class="px-6 py-4">Shift & Area</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-medium">
+                        @foreach($schedules->groupBy(function($item) { return $item->patrol_date->format('Y-m-d'); }) as $date => $dateSchedules)
+                            <tr class="bg-slate-50 text-slate-600 font-bold text-[10px] uppercase tracking-wider">
+                                <td colspan="5" class="px-6 py-2 border-y border-slate-150 bg-slate-50/70">
+                                    <div class="flex items-center space-x-1.5">
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>{{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}</span>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium">
-                            @foreach($schedules as $schedule)
+                            @foreach($dateSchedules as $schedule)
                                 <tr class="hover:bg-slate-50/25 transition text-slate-800">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="text-slate-900 block font-bold">{{ $schedule->user->name }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-slate-800 block text-xs font-bold">{{ $schedule->patrol_date->format('d-m-Y') }}</span>
-                                        <span class="text-[10px] text-slate-400 block mt-0.5 font-normal">{{ substr($schedule->start_time, 0, 5) }} - {{ substr($schedule->end_time, 0, 5) }} WIB</span>
+                                        <span class="text-slate-800 block text-xs font-semibold">{{ substr($schedule->start_time, 0, 5) }} - {{ substr($schedule->end_time, 0, 5) }} WIB</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span class="px-2 py-0.5 text-[9px] font-bold rounded-sm uppercase tracking-wide bg-indigo-50 text-indigo-700 inline-block border border-indigo-100">
@@ -155,16 +225,18 @@
                                     </td>
                                 </tr>
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
-                @if($schedules->hasPages())
-                    <div class="px-6 py-4 border-t border-slate-100">
-                        {{ $schedules->links() }}
-                    </div>
-                @endif
+            @if($schedules->hasPages())
+                <div class="px-6 py-4 border-t border-slate-100">
+                    {{ $schedules->links() }}
+                </div>
             @endif
+        @endif
+        </div>
         </div>
 
     </div>
@@ -173,7 +245,7 @@
 
 <!-- Modal Edit Jadwal (hidden by default) -->
 <div id="editScheduleModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-    <div class="bg-white border border-slate-200/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden font-medium">
+    <div class="bg-white border border-slate-200/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden font-medium flex flex-col max-h-[90vh]">
         <div class="px-6 py-4 border-b border-slate-150 flex justify-between items-center bg-slate-50">
             <h3 class="font-extrabold text-slate-900 text-base flex items-center space-x-2">
                 <i data-lucide="calendar" class="w-5 h-5 text-indigo-650"></i>
@@ -184,7 +256,7 @@
             </button>
         </div>
 
-        <form id="editScheduleForm" method="POST" class="p-6 space-y-4">
+        <form id="editScheduleForm" method="POST" class="p-6 space-y-4 overflow-y-auto flex-1">
             @csrf
             
             <!-- Satpam -->
@@ -261,8 +333,6 @@
             </div>
         </form>
     </div>
-</div>
-
 <script>
     function fillShiftHours(shift) {
         const start = document.getElementById('start_time');
@@ -303,5 +373,154 @@
     function closeEditScheduleModal() {
         document.getElementById('editScheduleModal').classList.add('hidden');
     }
+
+    // Update background/border classes for checked items
+    function updateCheckboxStyles() {
+        document.querySelectorAll('.checkbox-warga').forEach(cb => {
+            const item = cb.closest('.warga-item');
+            if (cb.checked) {
+                item.classList.add('bg-indigo-50/50', 'border-indigo-200');
+                item.classList.remove('hover:bg-white', 'border-transparent', 'hover:border-slate-202');
+            } else {
+                item.classList.remove('bg-indigo-50/50', 'border-indigo-200');
+                item.classList.add('hover:bg-white', 'border-transparent');
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Event listener for checkbox state changes
+        document.querySelectorAll('.checkbox-warga').forEach(cb => {
+            cb.addEventListener('change', updateCheckboxStyles);
+        });
+
+        // Search feature
+        const searchInput = document.getElementById('search_warga');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                document.querySelectorAll('.warga-item').forEach(item => {
+                    const name = item.getAttribute('data-name');
+                    if (name.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Select All / Deselect All
+        const selectAllBtn = document.getElementById('select_all_warga');
+        const deselectAllBtn = document.getElementById('deselect_all_warga');
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.warga-item').forEach(item => {
+                    if (item.style.display !== 'none') {
+                        const cb = item.querySelector('.checkbox-warga');
+                        if (cb) cb.checked = true;
+                    }
+                });
+                updateCheckboxStyles();
+            });
+        }
+
+        if (deselectAllBtn) {
+            deselectAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.warga-item').forEach(item => {
+                    if (item.style.display !== 'none') {
+                        const cb = item.querySelector('.checkbox-warga');
+                        if (cb) cb.checked = false;
+                    }
+                });
+                updateCheckboxStyles();
+            });
+        }
+
+        // Form validation
+        const scheduleForm = document.querySelector('form[action="{{ route('perangkat.schedules.store') }}"]');
+        if (scheduleForm) {
+            scheduleForm.addEventListener('submit', function(e) {
+                const checkedCount = document.querySelectorAll('.checkbox-warga:checked').length;
+                if (checkedCount === 0) {
+                    e.preventDefault();
+                    if (window.showToast) {
+                        window.showToast('Silakan pilih minimal satu warga petugas ronda.', 'error');
+                    } else {
+                        alert('Silakan pilih minimal satu warga petugas ronda.');
+                    }
+                }
+            });
+        }
+        
+        // Date filter
+        const filterDateSelect = document.getElementById('filter_date');
+        if (filterDateSelect) {
+            filterDateSelect.addEventListener('change', function() {
+                const val = this.value;
+                const url = new URL(window.location.href);
+                if (val === 'all') {
+                    url.searchParams.delete('date');
+                } else {
+                    url.searchParams.set('date', val);
+                }
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            });
+        }
+        
+        // Citizen Availability Check based on Selected Date
+        const assignedUsersByDate = {!! json_encode($assignedUsersByDate) !!};
+
+        function updateCitizenAvailability() {
+            const selectedDate = document.getElementById('patrol_date').value;
+            const assignedIds = assignedUsersByDate[selectedDate] || [];
+
+            document.querySelectorAll('.warga-item').forEach(item => {
+                const cb = item.querySelector('.checkbox-warga');
+                const userId = parseInt(cb.value);
+                let badge = item.querySelector('.badge-assigned');
+
+                if (assignedIds.includes(userId)) {
+                    cb.disabled = true;
+                    cb.checked = false;
+                    item.classList.add('opacity-60', 'cursor-not-allowed');
+                    item.classList.remove('cursor-pointer');
+
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'badge-assigned px-1 py-0.2 text-[8px] font-semibold rounded-xs uppercase tracking-tight bg-rose-50 text-rose-700 border border-rose-100 shrink-0 ml-1';
+                        badge.textContent = 'Bentrok';
+                        const details = item.querySelector('.details-wrapper');
+                        if (details) {
+                            details.appendChild(badge);
+                        }
+                    }
+                } else {
+                    cb.disabled = false;
+                    item.classList.remove('opacity-60', 'cursor-not-allowed');
+                    item.classList.add('cursor-pointer');
+
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            });
+
+            updateCheckboxStyles();
+        }
+
+        const patrolDateInput = document.getElementById('patrol_date');
+        if (patrolDateInput) {
+            patrolDateInput.addEventListener('change', updateCitizenAvailability);
+            patrolDateInput.addEventListener('input', updateCitizenAvailability);
+            // Run on load to initialize
+            updateCitizenAvailability();
+        }
+        
+        // Initial style trigger
+        updateCheckboxStyles();
+    });
 </script>
 @endsection

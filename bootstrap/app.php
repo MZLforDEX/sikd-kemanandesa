@@ -16,5 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Sesi Anda telah berakhir, silakan muat ulang halaman.',
+                ], 419);
+            }
+
+            return redirect()->back()
+                ->withInput($request->except(['_token', 'password', 'password_confirmation']))
+                ->with('error', 'Sesi halaman telah berakhir (Page Expired). Silakan coba kirim kembali form Anda.');
+        });
     })->create();

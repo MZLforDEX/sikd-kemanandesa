@@ -3,6 +3,7 @@
 @section('title', 'Jadwal & Log Ronda Anda')
 
 @section('content')
+
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
     
     <!-- Header -->
@@ -15,7 +16,24 @@
 
     <!-- Schedules Grid/List -->
     <div class="bg-white border border-slate-200/60 rounded-3xl overflow-hidden shadow-premium-sm font-medium">
-        
+        <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+                <h2 class="font-extrabold text-slate-900 text-base">Riwayat Tugas Ronda</h2>
+                <p class="text-[11px] text-slate-550 font-normal mt-0.5">Lihat agenda ronda Anda dan laporkan patroli di sini.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="filter_date" class="text-xs font-bold text-slate-500 whitespace-nowrap">Pilih Tanggal:</label>
+                <select id="filter_date" class="rounded-xl border border-slate-200 py-1.5 px-3 text-xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 bg-white font-medium text-slate-750">
+                    <option value="all" {{ ($selectedDate ?? '') == 'all' || !($selectedDate ?? '') ? 'selected' : '' }}>Semua Tanggal</option>
+                    @foreach($availableDates as $date)
+                        <option value="{{ $date }}" {{ ($selectedDate ?? '') == $date ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::parse($date)->translatedFormat('d-m-Y') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
         @if($schedules->isEmpty())
             <div class="p-16 text-center text-slate-400">
                 <i data-lucide="calendar" class="w-12 h-12 mx-auto mb-3 text-slate-350"></i>
@@ -23,29 +41,37 @@
                 <p class="text-xs text-slate-500 mt-1 font-normal">Anda belum memiliki penugasan jadwal ronda dari perangkat desa.</p>
             </div>
         @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-slate-50/50 text-slate-500 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider">
-                            <th class="px-6 py-4">Tanggal Tugas</th>
-                            <th class="px-6 py-4">Shift & Waktu</th>
-                            <th class="px-6 py-4">Area Ronda</th>
-                            <th class="px-6 py-4">Catatan Instruksi</th>
-                            <th class="px-6 py-4">Status</th>
-                            <th class="px-6 py-4 text-right">Laporan Lapangan</th>
+            <div class="overflow-auto max-h-[380px]">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead class="sticky top-0 bg-slate-50 z-10">
+                    <tr class="text-slate-500 border-b border-slate-150 text-[10px] font-bold uppercase tracking-wider bg-slate-50">
+                        <th class="px-6 py-4">Waktu</th>
+                        <th class="px-6 py-4">Shift</th>
+                        <th class="px-6 py-4">Area Ronda</th>
+                        <th class="px-6 py-4">Catatan Instruksi</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Laporan Lapangan</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    @foreach($schedules->groupBy(function($item) { return $item->patrol_date->format('Y-m-d'); }) as $date => $dateSchedules)
+                        <tr class="bg-slate-50 text-slate-600 font-bold text-[10px] uppercase tracking-wider">
+                            <td colspan="6" class="px-6 py-2 border-y border-slate-150 bg-slate-50/70">
+                                <div class="flex items-center space-x-1.5">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span>{{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}</span>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 font-medium">
-                        @foreach($schedules as $sched)
+                        @foreach($dateSchedules as $sched)
                             <tr class="hover:bg-slate-50/25 transition text-slate-800">
-                                <td class="px-6 py-4 whitespace-nowrap text-slate-900 font-bold">
-                                    {{ $sched->patrol_date->format('d-m-Y') }}
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-xs font-semibold text-slate-800">{{ substr($sched->start_time, 0, 5) }} - {{ substr($sched->end_time, 0, 5) }} WIB</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 py-0.5 text-[9px] font-bold rounded-sm uppercase tracking-wide bg-indigo-50 text-indigo-700 inline-block border border-indigo-100">
                                         Shift {{ $sched->shift }}
                                     </span>
-                                    <span class="text-[10px] text-slate-400 block mt-1 font-normal">{{ substr($sched->start_time, 0, 5) }} - {{ substr($sched->end_time, 0, 5) }} WIB</span>
                                 </td>
                                 <td class="px-6 py-4 text-slate-750 font-bold">
                                     {{ $sched->area }}
@@ -76,16 +102,18 @@
                                 </td>
                             </tr>
                         @endforeach
-                    </tbody>
-                </table>
-            </div>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
-            @if($schedules->hasPages())
-                <div class="px-6 py-4 border-t border-slate-100">
-                    {{ $schedules->links() }}
-                </div>
-            @endif
+        @if($schedules->hasPages())
+            <div class="px-6 py-4 border-t border-slate-100">
+                {{ $schedules->links() }}
+            </div>
         @endif
+    @endif
+        </div>
         
     </div>
 
@@ -93,7 +121,7 @@
 
 <!-- Modal Isi Log Patroli (hidden by default) -->
 <div id="patrolLogModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-    <div class="bg-white border border-slate-200/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden font-medium">
+    <div class="bg-white border border-slate-200/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden font-medium flex flex-col max-h-[90vh]">
         <div class="px-6 py-4 border-b border-slate-150 flex justify-between items-center bg-slate-50">
             <h3 class="font-extrabold text-slate-900 text-base flex items-center space-x-2">
                 <i data-lucide="shield-check" class="w-5 h-5 text-indigo-650"></i>
@@ -104,7 +132,7 @@
             </button>
         </div>
 
-        <form id="patrolLogForm" method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
+        <form id="patrolLogForm" method="POST" enctype="multipart/form-data" class="p-6 space-y-4 overflow-y-auto flex-1">
             @csrf
             
             <div class="bg-slate-50 p-3.5 rounded-2xl text-xs space-y-1 border border-slate-200/60">
@@ -153,6 +181,7 @@
     </div>
 </div>
 
+
 <script>
     function openPatrolLogModal(schedule) {
         const modal = document.getElementById('patrolLogModal');
@@ -173,5 +202,22 @@
     function closePatrolLogModal() {
         document.getElementById('patrolLogModal').classList.add('hidden');
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const filterDateSelect = document.getElementById('filter_date');
+        if (filterDateSelect) {
+            filterDateSelect.addEventListener('change', function() {
+                const val = this.value;
+                const url = new URL(window.location.href);
+                if (val === 'all') {
+                    url.searchParams.delete('date');
+                } else {
+                    url.searchParams.set('date', val);
+                }
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            });
+        }
+    });
 </script>
 @endsection

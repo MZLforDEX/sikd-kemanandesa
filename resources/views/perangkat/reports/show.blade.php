@@ -80,8 +80,9 @@
                                      shadowSize: [30, 30]
                                  });
 
+                                 var popupHtml = '<b>Aduan Warga:</b> ' + {!! json_encode(e($report->location)) !!};
                                  L.marker([lat, lng], { icon: markerIcon }).addTo(map)
-                                     .bindPopup('<b>Aduan Warga:</b> {{ addslashes($report->location) }}')
+                                     .bindPopup(popupHtml)
                                      .openPopup();
                             });
                         </script>

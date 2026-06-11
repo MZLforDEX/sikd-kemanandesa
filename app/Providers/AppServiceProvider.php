@@ -14,11 +14,8 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        \App\Models\Notification::observe(\App\Observers\NotificationObserver::class);
     }
 }

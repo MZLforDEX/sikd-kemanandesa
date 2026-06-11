@@ -27,7 +27,7 @@
         </div>
     </div>
     <div class="relative">
-        <div id="dashboard-map" class="h-[28rem] sm:h-96 w-full z-10"></div>
+        <div id="dashboard-map" class="h-64 sm:h-96 w-full z-10"></div>
         <div class="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-premium-sm text-[10px] font-bold text-slate-600">
             <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-600"></i>
             Desa Awa · -3.9469, 121.3510

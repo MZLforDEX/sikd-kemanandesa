@@ -50,6 +50,22 @@ class SecuritySystemTest extends TestCase
         $citizen = User::where('email', 'budi@desa.id')->first();
         $this->assertTrue($citizen->hasRole('warga'));
 
+        // Create guard and patrol schedule for today so they are on duty
+        $guard = User::factory()->create([
+            'role_id' => Role::where('name', 'warga')->first()->id,
+            'email' => 'satpam@desa.id',
+        ]);
+
+        $schedule = PatrolSchedule::create([
+            'user_id' => $guard->id,
+            'patrol_date' => now()->toDateString(),
+            'shift' => 'malam',
+            'start_time' => '22:00:00',
+            'end_time' => '06:00:00',
+            'area' => 'Dusun Krajan',
+            'status' => 'scheduled',
+        ]);
+
         // 2. REPORT: Citizen creates a new security report
         $reportData = [
             'title' => 'Pencurian Ayam di RT 01',
@@ -60,62 +76,21 @@ class SecuritySystemTest extends TestCase
         $response = $this->actingAs($citizen)->post('/warga/laporan', $reportData);
         $response->assertRedirect('/warga/dashboard');
 
+        // Verify it is automatically verified and assigned to the active guard on duty
         $this->assertDatabaseHas('reports', [
             'title' => 'Pencurian Ayam di RT 01',
             'user_id' => $citizen->id,
-            'status' => 'baru',
+            'status' => 'diproses',
         ]);
 
         $report = Report::first();
 
-        // 3. VERIFY: Village Officer logs in, views the report, and verifies it to an Incident
-        $officerRole = Role::where('name', 'perangkat')->first();
-        $officer = User::factory()->create([
-            'role_id' => $officerRole->id,
-            'email' => 'perangkat@desa.id',
-        ]);
-
-        $response = $this->actingAs($officer)->get('/perangkat/laporan/' . $report->id);
-        $response->assertStatus(200);
-
-        // Verify and convert to incident
-        $verifyData = [
-            'action' => 'verify',
-            'notes' => 'Laporan valid, kejadian pencurian terkonfirmasi.',
-            'category' => 'pencurian',
-            'severity' => 'sedang',
-        ];
-
-        $response = $this->actingAs($officer)->post('/perangkat/laporan/' . $report->id . '/verifikasi', $verifyData);
-        $response->assertRedirect('/perangkat/laporan/' . $report->id);
-
-        $this->assertDatabaseHas('reports', [
-            'id' => $report->id,
-            'status' => 'diverifikasi',
-        ]);
-
         $this->assertDatabaseHas('incidents', [
             'report_id' => $report->id,
-            'category' => 'pencurian',
-            'severity' => 'sedang',
-            'status' => 'diverifikasi',
+            'status' => 'diproses',
         ]);
 
         $incident = Incident::first();
-
-        // 4. ASSIGN: Officer assigns a citizen to the incident ronda task
-        $guard = User::factory()->create([
-            'role_id' => Role::where('name', 'warga')->first()->id,
-            'email' => 'satpam@desa.id',
-        ]);
-
-        $assignData = [
-            'handler_id' => $guard->id,
-            'instruction' => 'Silakan cek ke lokasi RT 01 dan koordinasikan dengan warga.',
-        ];
-
-        $response = $this->actingAs($officer)->post('/perangkat/kejadian/' . $incident->id . '/tugaskan', $assignData);
-        $response->assertRedirect('/perangkat/kejadian/' . $incident->id);
 
         $this->assertDatabaseHas('handling_records', [
             'incident_id' => $incident->id,
@@ -123,11 +98,7 @@ class SecuritySystemTest extends TestCase
             'status_after' => 'diproses',
         ]);
 
-        // Check if report status is updated to 'diproses'
-        $this->assertEquals('diproses', $report->fresh()->status);
-        $this->assertEquals('diproses', $incident->fresh()->status);
-
-        // 5. FIELD HANDLING: Warga Ronda views task and logs follow-up actions
+        // 3. FIELD HANDLING: Warga Ronda views task and logs follow-up actions
         $response = $this->actingAs($guard)->get('/warga/ronda/kejadian/' . $incident->id);
         $response->assertStatus(200);
 
@@ -150,17 +121,7 @@ class SecuritySystemTest extends TestCase
         $this->assertEquals('ditangani', $report->fresh()->status);
         $this->assertEquals('ditangani', $incident->fresh()->status);
 
-        // 6. PATROL LOG: Ronda views schedules and submits a checkpoint log
-        $schedule = PatrolSchedule::create([
-            'user_id' => $guard->id,
-            'patrol_date' => now()->toDateString(),
-            'shift' => 'malam',
-            'start_time' => '22:00:00',
-            'end_time' => '06:00:00',
-            'area' => 'Dusun Krajan',
-            'status' => 'scheduled',
-        ]);
-
+        // 4. PATROL LOG: Ronda views schedules and submits a checkpoint log
         $logData = [
             'location_checked' => 'Gapura RT 01',
             'condition' => 'aman',
@@ -275,7 +236,7 @@ class SecuritySystemTest extends TestCase
             'user_id' => $citizen->id,
             'latitude' => -3.94712345,
             'longitude' => 121.35198765,
-            'status' => 'baru',
+            'status' => 'diverifikasi',
         ]);
 
         $report = Report::first();
@@ -322,5 +283,162 @@ class SecuritySystemTest extends TestCase
             'incident_id' => $incident->id,
             'handler_id' => $kades->id,
         ]);
+    }
+
+    public function test_patrol_warga_receives_correct_notification_link_and_can_access_emergency_report(): void
+    {
+        $wargaRole = Role::where('name', 'warga')->first();
+        $officerRole = Role::where('name', 'perangkat')->first();
+        $kadesRole = Role::where('name', 'kades')->first();
+
+        $citizen = User::factory()->create(['role_id' => $wargaRole->id]);
+        $guard = User::factory()->create(['role_id' => $wargaRole->id]);
+        $officer = User::factory()->create(['role_id' => $officerRole->id]);
+        $kades = User::factory()->create(['role_id' => $kadesRole->id]);
+
+        // Guard has active patrol shift today
+        PatrolSchedule::create([
+            'user_id' => $guard->id,
+            'shift' => 'malam',
+            'start_time' => '22:00:00',
+            'end_time' => '06:00:00',
+            'patrol_date' => now()->toDateString(),
+            'area' => 'Dusun Krajan',
+            'status' => 'scheduled',
+        ]);
+
+        // Citizen triggers emergency
+        $response = $this->actingAs($citizen)->post('/warga/darurat', [
+            'latitude' => -3.94712,
+            'longitude' => 121.35198,
+            'accuracy' => 10,
+        ]);
+
+        $report = Report::first();
+        $incident = Incident::first();
+
+        // Verify guard's notification links to warga.ronda.incidents.show
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $guard->id,
+            'link' => route('warga.ronda.incidents.show', $incident->id),
+        ]);
+
+        // Verify officer's notification links to perangkat.reports.show
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $officer->id,
+            'link' => route('perangkat.reports.show', $report->id),
+        ]);
+
+        // Verify kades's notification links to kades.reports
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $kades->id,
+            'link' => route('kades.reports'),
+        ]);
+
+        // Verify guard can view emergency report details
+        $response = $this->actingAs($guard)->get('/warga/laporan/' . $report->id);
+        $response->assertStatus(200);
+    }
+
+    public function test_cannot_create_patrol_schedule_for_non_warga_user(): void
+    {
+        $officerRole = Role::where('name', 'perangkat')->first();
+        $officer = User::factory()->create(['role_id' => $officerRole->id]);
+        $nonWarga = User::factory()->create(['role_id' => $officerRole->id]); // perangkat, not warga
+
+        $scheduleData = [
+            'user_ids' => [$nonWarga->id],
+            'shift' => 'malam',
+            'start_time' => '22:00',
+            'end_time' => '06:00',
+            'patrol_date' => now()->addDay()->toDateString(),
+            'area' => 'Dusun Krajan',
+            'notes' => 'Catatan uji',
+        ];
+
+        $response = $this->actingAs($officer)->post('/perangkat/jadwal', $scheduleData);
+        $response->assertSessionHasErrors('user_ids.0');
+        $this->assertEquals(0, PatrolSchedule::count());
+    }
+
+    public function test_can_create_patrol_schedule_for_multiple_warga_users(): void
+    {
+        $wargaRole = Role::where('name', 'warga')->first();
+        $officerRole = Role::where('name', 'perangkat')->first();
+
+        $officer = User::factory()->create(['role_id' => $officerRole->id]);
+        $citizen1 = User::factory()->create(['role_id' => $wargaRole->id]);
+        $citizen2 = User::factory()->create(['role_id' => $wargaRole->id]);
+
+        $scheduleData = [
+            'user_ids' => [$citizen1->id, $citizen2->id],
+            'shift' => 'malam',
+            'start_time' => '22:00',
+            'end_time' => '06:00',
+            'patrol_date' => now()->addDay()->toDateString(),
+            'area' => 'Dusun Krajan',
+            'notes' => 'Tugas kelompok ronda malam',
+        ];
+
+        $response = $this->actingAs($officer)->post('/perangkat/jadwal', $scheduleData);
+        $response->assertRedirect('/perangkat/jadwal');
+        $response->assertSessionHasNoErrors();
+
+        $this->assertEquals(2, PatrolSchedule::count());
+        $this->assertDatabaseHas('patrol_schedules', [
+            'user_id' => $citizen1->id,
+            'area' => 'Dusun Krajan',
+            'shift' => 'malam',
+        ]);
+        $this->assertDatabaseHas('patrol_schedules', [
+            'user_id' => $citizen2->id,
+            'area' => 'Dusun Krajan',
+            'shift' => 'malam',
+        ]);
+
+        // Verify both citizens received database notifications
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $citizen1->id,
+            'title' => 'Jadwal Ronda Baru',
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $citizen2->id,
+            'title' => 'Jadwal Ronda Baru',
+        ]);
+    }
+
+    public function test_cannot_create_overlapping_patrol_schedules_for_same_user(): void
+    {
+        $wargaRole = Role::where('name', 'warga')->first();
+        $officerRole = Role::where('name', 'perangkat')->first();
+
+        $officer = User::factory()->create(['role_id' => $officerRole->id]);
+        $citizen = User::factory()->create(['role_id' => $wargaRole->id]);
+
+        // Create initial patrol schedule
+        PatrolSchedule::create([
+            'user_id' => $citizen->id,
+            'shift' => 'malam',
+            'start_time' => '22:00',
+            'end_time' => '06:00',
+            'patrol_date' => now()->addDay()->toDateString(),
+            'area' => 'Dusun Krajan',
+            'status' => 'scheduled',
+        ]);
+
+        // Try creating overlapping schedule on same day/time
+        $scheduleData = [
+            'user_ids' => [$citizen->id],
+            'shift' => 'malam',
+            'start_time' => '22:00',
+            'end_time' => '06:00',
+            'patrol_date' => now()->addDay()->toDateString(),
+            'area' => 'Dusun Krajan 2',
+            'notes' => 'Tabrakan',
+        ];
+
+        $response = $this->actingAs($officer)->post('/perangkat/jadwal', $scheduleData);
+        $response->assertSessionHasErrors('user_ids');
+        $this->assertEquals(1, PatrolSchedule::count());
     }
 }

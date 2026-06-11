@@ -38,47 +38,58 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            function escapeHtml(text) {
+                if (!text) return '';
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
             var map = L.map('dashboard-map').setView([-3.946944, 121.351028], 15);
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }).addTo(map);
 
-            var villageCenter = L.marker([-3.946944, 121.351028], {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [18, 30],
-                    iconAnchor: [9, 30],
-                    popupAnchor: [1, -26],
-                    shadowSize: [30, 30]
-                })
-            }).addTo(map);
-            villageCenter.bindPopup("<b>Kantor Desa Awa</b><br>Kec. Samaturu, Kab. Kolaka, Sulawesi Tenggara");
+
 
             @foreach($reportsWithCoordinates as $report)
                 @if($report->latitude && $report->longitude)
                     (function() {
                         var lat = {{ $report->latitude }};
                         var lng = {{ $report->longitude }};
-                        var title = "{{ addslashes($report->title) }}";
-                        var status = "{{ $report->status }}";
-                        var location = "{{ addslashes($report->location) }}";
-                        var user = "{{ addslashes($report->user->name) }}";
+                        var title = {!! json_encode($report->title) !!};
+                        var description = {!! json_encode($report->description) !!};
+                        var status = {!! json_encode($report->status) !!};
+                        var location = {!! json_encode($report->location) !!};
+                        var user = {!! json_encode($report->user->name) !!};
                         var detailUrl = "{{ route('kades.reports') }}";
                         
-                        var markerColor = 'red';
-                        if (status === 'selesai') markerColor = 'green';
-                        else if (status === 'diproses' || status === 'diverifikasi' || status === 'ditangani') markerColor = 'orange';
-                        else if (status === 'ditolak') markerColor = 'grey';
+                        // Select marker based on status (blinking red for baru, green for selesai, red for others)
+                        var markerIcon;
+                        if (status === 'baru') {
+                            markerIcon = L.divIcon({
+                                className: 'blinking-marker-container',
+                                html: '<div class="blinking-marker"></div>',
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8],
+                                popupAnchor: [0, -8]
+                            });
+                        } else {
+                            var markerColor = 'red';
+                            if (status === 'selesai') markerColor = 'green';
 
-                        var markerIcon = L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
-                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                            iconSize: [18, 30],
-                            iconAnchor: [9, 30],
-                            popupAnchor: [1, -26],
-                            shadowSize: [30, 30]
-                        });
+                            markerIcon = L.icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
+                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                iconSize: [18, 30],
+                                iconAnchor: [9, 30],
+                                popupAnchor: [1, -26],
+                                shadowSize: [30, 30]
+                            });
+                        }
 
                         var marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
                         
@@ -92,16 +103,17 @@
                         }
 
                         var popupHtml = `
-                            <div class="p-1 space-y-1.5 min-w-[200px] text-xs">
+                            <div class="p-1 space-y-1.5 min-w-[220px] text-xs">
                                 <div class="flex justify-between items-center gap-2">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">Laporan</span>
                                     ${statusLabel}
                                 </div>
-                                <h4 class="font-bold text-slate-900 text-xs leading-tight">${title}</h4>
-                                <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${location}</p>
+                                <h4 class="font-bold text-slate-900 text-xs leading-tight">${escapeHtml(title)}</h4>
+                                <p class="text-[10px] text-slate-605 font-normal leading-normal mt-1">${escapeHtml(description)}</p>
+                                <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${escapeHtml(location)}</p>
                                 <div class="border-t border-slate-100 pt-1.5 mt-2 flex justify-between items-center text-[9px] text-slate-450">
-                                    <span>Oleh: ${user}</span>
-                                    <a href="${detailUrl}" class="font-bold text-indigo-650 hover:text-indigo-855">Lihat Daftar &rarr;</a>
+                                    <span>Oleh: ${escapeHtml(user)}</span>
+                                    <a href="${detailUrl}" class="font-bold text-indigo-655 hover:text-indigo-850">Lihat Daftar &rarr;</a>
                                 </div>
                             </div>
                         `;
@@ -112,10 +124,47 @@
 
             var maxReportId = {{ \App\Models\Report::max('id') ?? 0 }};
 
+            function formatFullDateTime(dateStr) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const d = new Date(dateStr);
+                const day = d.getDate();
+                const month = months[d.getMonth()];
+                const year = d.getFullYear();
+                const hrs = String(d.getHours()).padStart(2, '0');
+                const mins = String(d.getMinutes()).padStart(2, '0');
+                return `${day} ${month} ${year}, ${hrs}:${mins} WIB`;
+            }
+
+            function statusBadge(status) {
+                const badges = {
+                    'baru': 'bg-slate-100 text-slate-700 border-slate-200/50',
+                    'diverifikasi': 'bg-blue-50 text-blue-700 border-blue-100',
+                    'diproses': 'bg-amber-50 text-amber-700 border-amber-100',
+                    'ditangani': 'bg-cyan-50 text-cyan-700 border-cyan-100',
+                    'selesai': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    'ditolak': 'bg-rose-50 text-rose-700 border-rose-100'
+                };
+                const labels = {
+                    'baru': 'Baru',
+                    'diverifikasi': 'Terverifikasi',
+                    'diproses': 'Sedang Diproses',
+                    'ditangani': 'Ditangani Lapangan',
+                    'selesai': 'Kasus Selesai',
+                    'ditolak': 'Ditolak'
+                };
+                const cls = badges[status] || badges['baru'];
+                const label = labels[status] || status;
+                return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${cls}">${label}</span>`;
+            }
+
             function checkRealtimeUpdates() {
-                fetch(`{{ route('reports.realtime_updates') }}?last_id=${maxReportId}`)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                return fetch(`{{ route('reports.realtime_updates') }}?last_id=${maxReportId}`, { signal: controller.signal })
                     .then(response => response.json())
                     .then(data => {
+                        clearTimeout(timeoutId);
                         if (data.stats) {
                             document.getElementById('stats-total').textContent = data.stats.total;
                             document.getElementById('stats-diverifikasi').textContent = data.stats.diverifikasi;
@@ -129,19 +178,28 @@
                                 if (report.id > maxReportId) maxReportId = report.id;
 
                                 if (report.latitude && report.longitude) {
-                                    var markerColor = 'red';
-                                    if (report.status === 'selesai') markerColor = 'green';
-                                    else if (report.status === 'diproses' || report.status === 'diverifikasi' || report.status === 'ditangani') markerColor = 'orange';
-                                    else if (report.status === 'ditolak') markerColor = 'grey';
+                                    var markerIcon;
+                                    if (report.status === 'baru') {
+                                        markerIcon = L.divIcon({
+                                            className: 'blinking-marker-container',
+                                            html: '<div class="blinking-marker"></div>',
+                                            iconSize: [16, 16],
+                                            iconAnchor: [8, 8],
+                                            popupAnchor: [0, -8]
+                                        });
+                                    } else {
+                                        var markerColor = 'red';
+                                        if (report.status === 'selesai') markerColor = 'green';
 
-                                    var markerIcon = L.icon({
-                                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
-                                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                        iconSize: [18, 30],
-                                        iconAnchor: [9, 30],
-                                        popupAnchor: [1, -26],
-                                        shadowSize: [30, 30]
-                                    });
+                                        markerIcon = L.icon({
+                                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
+                                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                            iconSize: [18, 30],
+                                            iconAnchor: [9, 30],
+                                            popupAnchor: [1, -26],
+                                            shadowSize: [30, 30]
+                                        });
+                                    }
 
                                     var marker = L.marker([report.latitude, report.longitude], { icon: markerIcon }).addTo(map);
 
@@ -155,29 +213,60 @@
                                     }
 
                                     var detailUrl = "{{ route('kades.dashboard') }}";
-                                    var popupHtml = `
-                                        <div class="p-1 space-y-1.5 min-w-[200px] text-xs">
+                                     var popupHtml = `
+                                        <div class="p-1 space-y-1.5 min-w-[220px] text-xs">
                                             <div class="flex justify-between items-center gap-2">
                                                 <span class="text-[10px] font-bold text-slate-400 uppercase">Laporan Warga</span>
                                                 ${statusLabel}
                                             </div>
-                                            <h4 class="font-bold text-slate-900 text-xs leading-tight">${report.title}</h4>
-                                            <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${report.location}</p>
+                                            <h4 class="font-bold text-slate-900 text-xs leading-tight">${escapeHtml(report.title)}</h4>
+                                            <p class="text-[10px] text-slate-605 font-normal leading-normal mt-1">${escapeHtml(report.description)}</p>
+                                            <p class="text-[10px] text-slate-550 font-medium mt-0.5">Lokasi: ${escapeHtml(report.location)}</p>
                                             <div class="border-t border-slate-100 pt-1.5 mt-2 flex justify-between items-center text-[9px] text-slate-450">
-                                                <span>Oleh: ${report.user_name}</span>
+                                                <span>Oleh: ${escapeHtml(report.user_name)}</span>
                                                 <a href="${detailUrl}" class="font-bold text-indigo-655 hover:text-indigo-850">Lihat Daftar &rarr;</a>
                                             </div>
                                         </div>
                                     `;
                                     marker.bindPopup(popupHtml);
                                 }
+
+                                const recentList = document.getElementById('recent-reports-list');
+                                if (recentList) {
+                                    const emptyRecent = document.getElementById('recent-reports-empty');
+                                    if (emptyRecent) emptyRecent.classList.add('hidden');
+                                    recentList.classList.remove('hidden');
+
+                                    const item = document.createElement('div');
+                                    item.className = "dashboard-list-row items-center";
+                                    item.innerHTML = `
+                                        <div class="space-y-1 min-w-0">
+                                            <h3 class="font-bold text-slate-900 text-sm leading-snug">${escapeHtml(report.title)}</h3>
+                                            <p class="text-xs text-slate-500">
+                                                <strong>${escapeHtml(report.user_name)}</strong> · ${formatFullDateTime(report.reported_at)}
+                                            </p>
+                                            <p class="text-xs text-slate-605 truncate">${escapeHtml(report.location)}</p>
+                                        </div>
+                                        <div class="shrink-0">${statusBadge(report.status)}</div>
+                                    `;
+                                    recentList.insertBefore(item, recentList.firstChild);
+                                }
                             });
                         }
                     })
-                    .catch(err => console.error("Error fetching updates: ", err));
+                    .catch(err => {
+                        clearTimeout(timeoutId);
+                        console.error("Error fetching updates: ", err);
+                    });
             }
 
-            setInterval(checkRealtimeUpdates, 5000);
+            // Resilient polling using setTimeout to avoid request stacking on poor networks
+            function scheduleNextCheck() {
+                setTimeout(() => {
+                    checkRealtimeUpdates().finally(scheduleNextCheck);
+                }, 15000);
+            }
+            scheduleNextCheck();
         });
     </script>
 
@@ -213,30 +302,6 @@
                 </div>
             </x-dashboard.panel>
 
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-premium-sm space-y-4">
-                <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                    <i data-lucide="layout-grid" class="w-4 h-4 text-slate-500"></i>
-                    Sektor Keamanan Desa
-                </h3>
-                <div class="grid grid-cols-3 gap-3 text-xs font-bold">
-                    <div class="p-4 text-center rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-100 card-interactive">
-                        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600 mx-auto mb-1"></i>
-                        <span class="text-[10px] text-emerald-800 block">Sektor 01</span>
-                        <span class="text-xs text-emerald-700 mt-0.5 block">Aman</span>
-                    </div>
-                    <div class="p-4 text-center rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-100 card-interactive">
-                        <i data-lucide="eye" class="w-5 h-5 text-amber-600 mx-auto mb-1"></i>
-                        <span class="text-[10px] text-amber-800 block">Sektor 02</span>
-                        <span class="text-xs text-amber-700 mt-0.5 block">Waspada</span>
-                    </div>
-                    <div class="p-4 text-center rounded-2xl bg-gradient-to-br from-rose-50 to-rose-100/50 border border-rose-100 card-interactive">
-                        <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600 mx-auto mb-1"></i>
-                        <span class="text-[10px] text-rose-800 block">Sektor 03</span>
-                        <span class="text-xs text-rose-700 mt-0.5 block">Rentan</span>
-                    </div>
-                </div>
-            </div>
-
             @if($incidentsByCategory->isNotEmpty())
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-premium-sm space-y-4">
                 <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
@@ -261,8 +326,12 @@
                     <a href="{{ route('kades.reports') }}" class="text-xs text-indigo-650 hover:text-indigo-850 font-bold transition-premium">Semua Laporan</a>
                 </x-slot:actions>
 
-                <div class="divide-y divide-slate-100 font-medium">
-                    @forelse($recentReports as $report)
+                <div id="recent-reports-empty" class="{{ $recentReports->isEmpty() ? '' : 'hidden' }}">
+                    <x-dashboard.empty icon="inbox" title="Belum Ada Laporan" description="Laporan dari warga akan muncul di sini." />
+                </div>
+
+                <div id="recent-reports-list" class="divide-y divide-slate-100 font-medium {{ $recentReports->isEmpty() ? 'hidden' : '' }}">
+                    @foreach($recentReports as $report)
                         <div class="dashboard-list-row items-center">
                             <div class="space-y-1 min-w-0">
                                 <h3 class="font-bold text-slate-900 text-sm leading-snug">{{ $report->title }}</h3>
@@ -273,9 +342,7 @@
                             </div>
                             <div class="shrink-0">@include('partials.report-status-badge', ['status' => $report->status])</div>
                         </div>
-                    @empty
-                        <x-dashboard.empty icon="inbox" title="Belum Ada Laporan" description="Laporan dari warga akan muncul di sini." />
-                    @endforelse
+                    @endforeach
                 </div>
             </x-dashboard.panel>
         </div>

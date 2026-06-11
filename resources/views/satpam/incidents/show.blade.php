@@ -118,6 +118,37 @@
         <!-- Right: Action Form -->
         <div class="lg:col-span-5 space-y-6">
             
+            @if($incident->status === 'diproses' || $incident->status === 'ditangani')
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-premium-sm space-y-4 font-medium">
+                <h3 class="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center space-x-1.5">
+                    <i data-lucide="zap" class="w-5 h-5 text-emerald-600"></i>
+                    <span>Aksi Cepat Penanganan</span>
+                </h3>
+                @if($incident->status === 'diproses')
+                    <form action="{{ route('warga.ronda.incidents.handling', $incident->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="action_taken" value="Laporan penanganan lapangan lanjutan.">
+                        <input type="hidden" name="status_after" value="ditangani">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-premium-sm flex items-center justify-center space-x-2 transition-premium hover:-translate-y-0.5">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            <span>Lanjutkan ke: Ditangani</span>
+                        </button>
+                    </form>
+                @elseif($incident->status === 'ditangani')
+                    <form action="{{ route('warga.ronda.incidents.handling', $incident->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="action_taken" value="Penyelesaian penanganan lapangan selesai.">
+                        <input type="hidden" name="result" value="Kondisi sudah aman dan kondusif.">
+                        <input type="hidden" name="status_after" value="selesai">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-premium-sm flex items-center justify-center space-x-2 transition-premium hover:-translate-y-0.5">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>Tandai Selesai & Tutup Kasus</span>
+                        </button>
+                    </form>
+                @endif
+            </div>
+            @endif
+
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-premium-sm space-y-5 font-medium">
                 <h3 class="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center space-x-1.5">
                     <i data-lucide="edit-3" class="w-5 h-5 text-indigo-650"></i>

@@ -44,14 +44,30 @@ class SatpamController extends Controller
     // ==========================================
     // PATROL SCHEDULES & LOGS
     // ==========================================
-    public function schedules()
+    public function schedules(Request $request)
     {
         $user = Auth::user();
-        $schedules = PatrolSchedule::where('user_id', $user->id)
-            ->orderBy('patrol_date', 'desc')
-            ->paginate(15);
+        $selectedDate = $request->input('date');
 
-        return view('satpam.schedules', compact('schedules'));
+        $query = PatrolSchedule::where('user_id', $user->id)->orderBy('patrol_date', 'desc');
+
+        if ($selectedDate && $selectedDate !== 'all') {
+            $query->whereDate('patrol_date', $selectedDate);
+        }
+
+        $schedules = $query->paginate(15)->withQueryString();
+
+        $availableDates = PatrolSchedule::where('user_id', $user->id)
+            ->select('patrol_date')
+            ->distinct()
+            ->orderBy('patrol_date', 'desc')
+            ->get()
+            ->pluck('patrol_date')
+            ->map(fn($d) => $d->format('Y-m-d'))
+            ->unique()
+            ->values();
+
+        return view('satpam.schedules', compact('schedules', 'availableDates', 'selectedDate'));
     }
 
     public function storePatrolLog(Request $request, PatrolSchedule $schedule)

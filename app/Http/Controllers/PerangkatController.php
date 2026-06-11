@@ -35,7 +35,8 @@ class PerangkatController extends Controller
         $activeIncidents = Incident::whereIn('status', ['baru', 'diverifikasi', 'diproses', 'ditangani'])
             ->orderBy('created_at', 'desc')->take(5)->get();
 
-        $reportsWithCoordinates = Report::whereNotNull('latitude')
+        $reportsWithCoordinates = Report::with('user')
+            ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->get();
 
@@ -249,20 +250,67 @@ class PerangkatController extends Controller
     // ==========================================
     // PATROL SCHEDULES
     // ==========================================
-    public function schedules()
+    public function schedules(Request $request)
     {
-        $schedules = PatrolSchedule::with('user')->orderBy('patrol_date', 'desc')->paginate(15);
+        $selectedDate = $request->input('date');
+
+        $query = PatrolSchedule::with('user')->orderBy('patrol_date', 'desc');
+
+        if ($selectedDate && $selectedDate !== 'all') {
+            $query->whereDate('patrol_date', $selectedDate);
+        }
+
+        $schedules = $query->paginate(15)->withQueryString();
+
+        $availableDates = PatrolSchedule::select('patrol_date')
+            ->distinct()
+            ->orderBy('patrol_date', 'desc')
+            ->get()
+            ->pluck('patrol_date')
+            ->map(fn($d) => $d->format('Y-m-d'))
+            ->unique()
+            ->values();
+
+        $assignedUsersByDate = PatrolSchedule::select('patrol_date', 'user_id')
+            ->get()
+            ->groupBy(function($item) {
+                return $item->patrol_date->format('Y-m-d');
+            })
+            ->map(function($group) {
+                return $group->pluck('user_id')->unique()->values();
+            });
+
+        $userSchedules = PatrolSchedule::where('status', 'scheduled')
+            ->orderBy('patrol_date', 'asc')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($schedules) {
+                return $schedules->map(function($s) {
+                    return $s->patrol_date->format('d-m-Y');
+                })->unique()->values();
+            });
+
         $satpams = User::whereHas('role', function ($q) {
             $q->where('name', 'warga');
         })->get();
 
-        return view('perangkat.schedules.index', compact('schedules', 'satpams'));
+        return view('perangkat.schedules.index', compact('schedules', 'availableDates', 'selectedDate', 'satpams', 'assignedUsersByDate', 'userSchedules'));
     }
 
     public function storeSchedule(Request $request)
     {
         $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'user_ids' => ['required', 'array', 'min:1'],
+            'user_ids.*' => [
+                'required',
+                'exists:users,id',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $user = User::with('role')->find($value);
+                    if (!$user || !$user->hasRole('warga')) {
+                        $fail('Pengguna yang ditugaskan patroli harus memiliki peran Warga.');
+                    }
+                },
+            ],
             'shift' => ['required', Rule::in(['pagi', 'siang', 'malam'])],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
@@ -271,26 +319,60 @@ class PerangkatController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $schedule = PatrolSchedule::create([
-            'user_id' => $request->user_id,
-            'shift' => $request->shift,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'patrol_date' => $request->patrol_date,
-            'area' => $request->area,
-            'notes' => $request->notes,
-            'status' => 'scheduled',
-        ]);
+        $reqStart = \Carbon\Carbon::parse($request->patrol_date . ' ' . $request->start_time);
+        $reqEnd = \Carbon\Carbon::parse($request->patrol_date . ' ' . $request->end_time);
+        if ($request->end_time < $request->start_time) {
+            $reqEnd->addDay();
+        }
 
-        ActivityLog::log('Membuat jadwal patroli ronda untuk ' . $schedule->user->name);
+        foreach ($request->user_ids as $userId) {
+            $existingSchedules = PatrolSchedule::where('user_id', $userId)
+                ->whereBetween('patrol_date', [
+                    \Carbon\Carbon::parse($request->patrol_date)->subDay()->toDateString(),
+                    \Carbon\Carbon::parse($request->patrol_date)->addDay()->toDateString()
+                ])
+                ->get();
 
-        // Notify Warga
-        Notification::create([
-            'user_id' => $schedule->user_id,
-            'title' => 'Jadwal Ronda Baru',
-            'message' => 'Jadwal ronda baru pada tanggal ' . $schedule->patrol_date->format('d-m-Y') . ' (' . $schedule->shift . ') di ' . $schedule->area,
-            'link' => route('warga.ronda.schedules'),
-        ]);
+            foreach ($existingSchedules as $existing) {
+                $existStart = \Carbon\Carbon::parse($existing->patrol_date->format('Y-m-d') . ' ' . $existing->start_time);
+                $existEnd = \Carbon\Carbon::parse($existing->patrol_date->format('Y-m-d') . ' ' . $existing->end_time);
+                if ($existing->end_time < $existing->start_time) {
+                    $existEnd->addDay();
+                }
+
+                if ($reqStart->lt($existEnd) && $existStart->lt($reqEnd)) {
+                    $user = User::find($userId);
+                    return redirect()->back()
+                        ->withInput()
+                        ->withErrors(['user_ids' => 'Warga ' . $user->name . ' sudah memiliki jadwal ronda pada waktu yang bertabrakan (' . $existing->patrol_date->format('d-m-Y') . ' ' . substr($existing->start_time, 0, 5) . ' - ' . substr($existing->end_time, 0, 5) . ' WIB).']);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($request) {
+            foreach ($request->user_ids as $userId) {
+                $schedule = PatrolSchedule::create([
+                    'user_id' => $userId,
+                    'shift' => $request->shift,
+                    'start_time' => $request->start_time,
+                    'end_time' => $request->end_time,
+                    'patrol_date' => $request->patrol_date,
+                    'area' => $request->area,
+                    'notes' => $request->notes,
+                    'status' => 'scheduled',
+                ]);
+
+                ActivityLog::log('Membuat jadwal patroli ronda untuk ' . $schedule->user->name);
+
+                // Notify Warga
+                Notification::create([
+                    'user_id' => $schedule->user_id,
+                    'title' => 'Jadwal Ronda Baru',
+                    'message' => 'Jadwal ronda baru pada tanggal ' . $schedule->patrol_date->format('d-m-Y') . ' (' . $schedule->shift . ') di ' . $schedule->area,
+                    'link' => route('warga.ronda.schedules'),
+                ]);
+            }
+        });
 
         return redirect()->route('perangkat.schedules')->with('success', 'Jadwal patroli berhasil ditambahkan.');
     }
@@ -298,7 +380,16 @@ class PerangkatController extends Controller
     public function updateSchedule(Request $request, PatrolSchedule $schedule)
     {
         $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'user_id' => [
+                'required',
+                'exists:users,id',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $user = User::with('role')->find($value);
+                    if (!$user || !$user->hasRole('warga')) {
+                        $fail('Pengguna yang ditugaskan patroli harus memiliki peran Warga.');
+                    }
+                },
+            ],
             'shift' => ['required', Rule::in(['pagi', 'siang', 'malam'])],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
@@ -307,6 +398,35 @@ class PerangkatController extends Controller
             'notes' => ['nullable', 'string'],
             'status' => ['required', Rule::in(['scheduled', 'completed', 'missed'])],
         ]);
+
+        $reqStart = \Carbon\Carbon::parse($request->patrol_date . ' ' . $request->start_time);
+        $reqEnd = \Carbon\Carbon::parse($request->patrol_date . ' ' . $request->end_time);
+        if ($request->end_time < $request->start_time) {
+            $reqEnd->addDay();
+        }
+
+        $existingSchedules = PatrolSchedule::where('user_id', $request->user_id)
+            ->where('id', '!=', $schedule->id)
+            ->whereBetween('patrol_date', [
+                \Carbon\Carbon::parse($request->patrol_date)->subDay()->toDateString(),
+                \Carbon\Carbon::parse($request->patrol_date)->addDay()->toDateString()
+            ])
+            ->get();
+
+        foreach ($existingSchedules as $existing) {
+            $existStart = \Carbon\Carbon::parse($existing->patrol_date->format('Y-m-d') . ' ' . $existing->start_time);
+            $existEnd = \Carbon\Carbon::parse($existing->patrol_date->format('Y-m-d') . ' ' . $existing->end_time);
+            if ($existing->end_time < $existing->start_time) {
+                $existEnd->addDay();
+            }
+
+            if ($reqStart->lt($existEnd) && $existStart->lt($reqEnd)) {
+                $user = User::find($request->user_id);
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['user_id' => 'Warga ' . $user->name . ' sudah memiliki jadwal ronda pada waktu yang bertabrakan (' . $existing->patrol_date->format('d-m-Y') . ' ' . substr($existing->start_time, 0, 5) . ' - ' . substr($existing->end_time, 0, 5) . ' WIB).']);
+            }
+        }
 
         $schedule->update([
             'user_id' => $request->user_id,
@@ -320,6 +440,14 @@ class PerangkatController extends Controller
         ]);
 
         ActivityLog::log('Memperbarui jadwal patroli ID: ' . $schedule->id);
+
+        // Notify Warga about the schedule update
+        Notification::create([
+            'user_id' => $schedule->user_id,
+            'title' => 'Pembaruan Jadwal Ronda',
+            'message' => 'Jadwal ronda Anda telah diperbarui untuk tanggal ' . \Carbon\Carbon::parse($schedule->patrol_date)->format('d-m-Y') . ' (' . $schedule->shift . ') di ' . $schedule->area,
+            'link' => route('warga.ronda.schedules'),
+        ]);
 
         return redirect()->route('perangkat.schedules')->with('success', 'Jadwal patroli berhasil diperbarui.');
     }

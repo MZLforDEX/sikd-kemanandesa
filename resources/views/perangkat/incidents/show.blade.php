@@ -70,8 +70,9 @@
                                      shadowSize: [30, 30]
                                  });
 
+                                 var popupHtml = '<b>Lokasi Kejadian:</b> ' + {!! json_encode($incident->location) !!} + '<br><span class="text-rose-500 font-bold text-[10px] uppercase">Zona Rawan Keamanan</span>';
                                  L.marker([lat, lng], { icon: markerIcon }).addTo(map)
-                                     .bindPopup('<b>Lokasi Kejadian:</b> {{ addslashes($incident->location) }}<br><span class="text-rose-500 font-bold text-[10px] uppercase">Zona Rawan Keamanan</span>')
+                                     .bindPopup(popupHtml)
                                      .openPopup();
                             });
                         </script>
@@ -184,6 +185,30 @@
                     <i data-lucide="activity" class="w-5 h-5 text-indigo-650"></i>
                     <span>Perbarui Status Kejadian</span>
                 </h3>
+
+                @if($incident->status === 'diproses' || $incident->status === 'ditangani')
+                <form action="{{ route('perangkat.incidents.status', $incident->id) }}" method="POST">
+                    @csrf
+                    @if($incident->status === 'diproses')
+                        <input type="hidden" name="status" value="ditangani">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-premium-sm flex items-center justify-center space-x-2 transition-premium hover:-translate-y-0.5">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            <span>Ubah Status ke: Ditangani</span>
+                        </button>
+                    @elseif($incident->status === 'ditangani')
+                        <input type="hidden" name="status" value="selesai">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-premium-sm flex items-center justify-center space-x-2 transition-premium hover:-translate-y-0.5">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>Tandai Kejadian Selesai</span>
+                        </button>
+                    @endif
+                </form>
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-slate-200"></div>
+                    <span class="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Atau Manual</span>
+                    <div class="flex-grow border-t border-slate-200"></div>
+                </div>
+                @endif
 
                 <form action="{{ route('perangkat.incidents.status', $incident->id) }}" method="POST" class="space-y-4">
                     @csrf

@@ -7,24 +7,22 @@
 
 @php
     $variants = [
-        'indigo' => 'from-indigo-600 via-indigo-650 to-violet-700',
-        'violet' => 'from-violet-600 via-indigo-650 to-indigo-800',
-        'emerald' => 'from-emerald-600 via-teal-600 to-cyan-700',
-        'cyan' => 'from-cyan-600 via-indigo-600 to-indigo-750',
+        'indigo' => 'from-slate-900 via-indigo-950 to-indigo-900',
+        'violet' => 'from-indigo-950 via-slate-900 to-indigo-900',
+        'emerald' => 'from-emerald-950 via-slate-900 to-emerald-900',
+        'cyan' => 'from-indigo-950 via-indigo-900 to-slate-950',
     ];
     $gradient = $variants[$variant] ?? $variants['indigo'];
 @endphp
 
-<div class="dashboard-hero relative overflow-hidden rounded-3xl bg-gradient-to-br {{ $gradient }} p-6 sm:p-8 text-white shadow-premium-lg">
-    <div class="dashboard-hero-pattern absolute inset-0 opacity-[0.12]"></div>
-    <div class="dashboard-hero-glow absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl"></div>
-    <div class="dashboard-hero-glow absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
+<div class="dashboard-hero relative overflow-hidden rounded-3xl bg-gradient-to-br {{ $gradient }} p-6 sm:p-8 text-white shadow-premium-lg border border-slate-800">
+    <div class="dashboard-hero-pattern absolute inset-0 opacity-[0.08]"></div>
 
     <div class="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div class="space-y-2 min-w-0">
             @if($badge)
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm border border-white/20">
-                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-xs">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     {{ $badge }}
                 </span>
             @endif
@@ -32,8 +30,12 @@
             @if($subtitle)
                 <p class="text-sm text-white/80 max-w-xl font-medium leading-relaxed">{{ $subtitle }}</p>
             @endif
-            <p class="text-[11px] text-white/50 font-semibold">
-                {{ now()->translatedFormat('l, d F Y') }} · Desa Awa, Kec. Samaturu
+            <p class="text-[10px] text-white/60 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="calendar" class="w-3.5 h-3.5 text-white/70"></i>
+                <span>{{ now()->translatedFormat('l, d F Y') }}</span>
+                <span>·</span>
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-white/70"></i>
+                <span>Pemerintah Desa Awa, Kec. Samaturu</span>
             </p>
         </div>
         @if(isset($actions))

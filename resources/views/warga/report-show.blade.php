@@ -77,8 +77,9 @@
                                      shadowSize: [30, 30]
                                  });
 
+                                 var popupHtml = '<b>Lokasi:</b> ' + {!! json_encode(e($report->location)) !!} + '<br><span class="text-slate-400 font-light text-[11px]">Sektor Pengawasan Keamanan</span>';
                                  L.marker([lat, lng], { icon: markerIcon }).addTo(map)
-                                     .bindPopup('<b>Lokasi:</b> {{ addslashes($report->location) }}<br><span class="text-slate-400 font-light text-[11px]">Sektor Pengawasan Keamanan</span>')
+                                     .bindPopup(popupHtml)
                                      .openPopup();
                             });
                         </script>
@@ -116,6 +117,24 @@
                         <i data-lucide="clock" class="w-8 h-8 text-slate-350 animate-pulse"></i>
                         <h4 class="font-extrabold text-sm text-slate-700">Menunggu Verifikasi</h4>
                         <p class="text-xs text-slate-500 max-w-[200px] leading-relaxed font-normal">Perangkat desa sedang meneliti laporan Anda untuk diverifikasi.</p>
+                        
+                        @php
+                            $isPatrolActiveToday = false;
+                            if (auth()->user()->hasRole('warga')) {
+                                $isPatrolActiveToday = auth()->user()->patrolSchedules()->whereDate('patrol_date', now()->toDateString())->exists();
+                            }
+                        @endphp
+                        @if($isPatrolActiveToday)
+                            <div class="pt-4 border-t border-slate-100 w-full mt-3">
+                                <form action="{{ route('warga.reports.proses', $report->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition duration-300 shadow-md">
+                                        <i data-lucide="shield" class="w-4 h-4"></i>
+                                        <span>Proses & Tangani Langsung</span>
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
                     </div>
                 @else
                     <!-- Vertical Timeline -->
@@ -189,6 +208,24 @@
                                 <div>
                                     <h4 class="text-sm font-bold text-slate-900">Penjadwalan Petugas</h4>
                                     <p class="text-xs text-slate-500 mt-1 leading-relaxed font-normal">Kejadian sedang dalam proses disposisi tugas kepada anggota patroli/satpam desa.</p>
+                                    
+                                    @php
+                                        $isPatrolActiveToday = false;
+                                        if (auth()->user()->hasRole('warga')) {
+                                            $isPatrolActiveToday = auth()->user()->patrolSchedules()->whereDate('patrol_date', now()->toDateString())->exists();
+                                        }
+                                    @endphp
+                                    @if($isPatrolActiveToday)
+                                        <div class="pt-4 mt-2">
+                                            <form action="{{ route('warga.reports.proses', $report->id) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs transition duration-300 shadow-md">
+                                                    <i data-lucide="shield" class="w-4 h-4"></i>
+                                                    <span>Proses & Tangani Laporan</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforelse

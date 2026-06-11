@@ -40,9 +40,14 @@ class KadesController extends Controller
             ->groupBy('category')
             ->get();
 
+        $driver = DB::connection()->getDriverName();
+        $monthExpr = $driver === 'sqlite' 
+            ? "strftime('%m', incident_date)" 
+            : "MONTH(incident_date)";
+
         // Monthly trends for the current year
         $monthlyTrends = Incident::select(
-                DB::raw("strftime('%m', incident_date) as month"),
+                DB::raw("{$monthExpr} as month"),
                 DB::raw('count(*) as total')
             )
             ->whereYear('incident_date', $now->year)
@@ -111,8 +116,6 @@ class KadesController extends Controller
 
     public function tren()
     {
-        $now = Carbon::now();
-
         // 1. Incidents count by category mapped to associative array
         $categories = Incident::select('category', DB::raw('count(*) as total'))
             ->groupBy('category')
@@ -127,14 +130,7 @@ class KadesController extends Controller
             ->pluck('total', 'severity')
             ->toArray();
 
-        // 3. Hotspot areas / locations
-        $hotspots = Incident::select('location', DB::raw('count(*) as total'))
-            ->whereNotNull('location')
-            ->groupBy('location')
-            ->orderBy('total', 'desc')
-            ->get();
-
-        // 4. Paginated Activity Logs for Audit
+        // 3. Paginated Activity Logs for Audit
         $logs = ActivityLog::with('user.role')->orderBy('created_at', 'desc')->paginate(20);
 
         return view('kades.tren', compact('categories', 'severities', 'logs'));
