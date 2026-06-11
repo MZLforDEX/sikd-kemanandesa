@@ -581,7 +581,7 @@
     @auth
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            const vapidPublicKey = "{{ env('VAPID_PUBLIC_KEY') }}";
+            const vapidPublicKey = "{{ config('services.webpush.public_key') }}";
             const pushToggleBtn = document.getElementById('push-toggle-btn');
             const pushToggleText = document.getElementById('push-toggle-text');
             const pushIcon = document.getElementById('push-icon');

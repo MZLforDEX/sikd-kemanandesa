@@ -13,8 +13,8 @@ class WebPushService
 
     public function __construct()
     {
-        $publicKey = env('VAPID_PUBLIC_KEY');
-        $privateKey = env('VAPID_PRIVATE_KEY');
+        $publicKey = config('services.webpush.public_key');
+        $privateKey = config('services.webpush.private_key');
 
         if ($publicKey && $privateKey) {
             // Fix for Windows OpenSSL config path issue in library

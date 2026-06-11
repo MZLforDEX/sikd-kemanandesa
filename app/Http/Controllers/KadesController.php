@@ -81,7 +81,7 @@ class KadesController extends Controller
     public function reports(Request $request)
     {
         $status = $request->get('status');
-        $query = Report::with(['user', 'incident'])->orderBy('created_at', 'desc');
+        $query = Report::with(['user', 'incident.handlingRecords.handler'])->orderBy('created_at', 'desc');
 
         if ($status) {
             $query->where('status', $status);

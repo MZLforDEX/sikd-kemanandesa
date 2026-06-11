@@ -70,7 +70,7 @@
                                      shadowSize: [30, 30]
                                  });
 
-                                 var popupHtml = '<b>Lokasi Kejadian:</b> ' + {!! json_encode($incident->location) !!} + '<br><span class="text-rose-500 font-bold text-[10px] uppercase">Zona Rawan Keamanan</span>';
+                                 var popupHtml = '<b>Lokasi Kejadian:</b> ' + {!! json_encode(e($incident->location)) !!} + '<br><span class="text-rose-500 font-bold text-[10px] uppercase">Zona Rawan Keamanan</span>';
                                  L.marker([lat, lng], { icon: markerIcon }).addTo(map)
                                      .bindPopup(popupHtml)
                                      .openPopup();

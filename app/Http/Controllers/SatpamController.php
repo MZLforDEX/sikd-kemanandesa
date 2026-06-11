@@ -187,9 +187,9 @@ class SatpamController extends Controller
         ]);
 
         $allowedTransitions = [
-            'diverifikasi' => ['diproses'],
-            'diproses' => ['ditangani'],
-            'ditangani' => ['selesai'],
+            'diverifikasi' => ['diverifikasi', 'diproses'],
+            'diproses' => ['diproses', 'ditangani'],
+            'ditangani' => ['ditangani', 'selesai'],
             'selesai' => [],
             'ditolak' => [],
         ];
