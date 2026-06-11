@@ -63,25 +63,5 @@ class DatabaseSeeder extends Seeder
             'address' => 'Rumah Dinas Kades, Desa Awa',
         ]);
 
-        // 3. Seed Warga Dummy Users
-        $wargaNames = [
-            'Ahmad Fauzi', 'Budi Santoso', 'Chandra Wijaya', 'Dedi Kurniawan', 'Eko Prasetyo',
-            'Fajar Hidayat', 'Guntur Wibowo', 'Hendra Setiawan', 'Indra Lesmana', 'Joko Susilo',
-            'Kartika Sari', 'Larasati Putri', 'Mega Utami', 'Novi Rahmawati', 'Oki Saputra',
-            'Pratama Putra', 'Qori Amelia', 'Rian Hidayat', 'Siti Aminah', 'Taufik Hidayat',
-            'Umar Syarif', 'Vina Panduwinata', 'Wahyu Hidayat', 'Xena Princess', 'Yayan Ruhian',
-            'Zainal Abidin', 'Adi Wijaya', 'Bambang Pamungkas', 'Cahyo Utomo', 'Dewi Lestari'
-        ];
-
-        foreach ($wargaNames as $index => $name) {
-            User::create([
-                'role_id' => $roleModels['warga']->id,
-                'name' => $name,
-                'email' => 'warga' . ($index + 1) . '@desa.id',
-                'password' => Hash::make('password'),
-                'phone' => '0812' . str_pad($index + 1, 8, '0', STR_PAD_LEFT),
-                'address' => 'RT 0' . (($index % 5) + 1) . ' / RW 0' . (($index % 2) + 1) . ', Dusun Desa Awa',
-            ]);
-        }
     }
 }
